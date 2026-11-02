@@ -1,0 +1,465 @@
+---
+title: "Tarea 5 Variables Aleatorias Continuas"
+author: "Luis Manuel Duran"
+format: html
+editor: visual
+---
+
+```{r}
+# ==============================================================================
+# TAREA 6: ESTADÍSTICA APLICADA - DISTRIBUCIONES CONTINUAS DE PROBABILIDAD
+# ==============================================================================
+# En este script resuelvo la Tarea 6 analizando las 8 distribuciones continuas 
+# principales. Para cada distribución defino sus parámetros teóricos, grafico su 
+# densidad (PDF) y acumulada (CDF), y resuelvo 3 ejercicios prácticos comparando 
+# la probabilidad teórica exacta contra simulación Monte Carlo en R.
+# ==============================================================================
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+
+# Fijo la semilla para garantizar la reproducibilidad de mis simulaciones
+set.seed(42)
+
+# Configuro el tema visual de ggplot2 para todas mis gráficas
+theme_set(theme_minimal() + 
+            theme(plot.title = element_text(face = "bold", size = 11, hjust = 0.5),
+                  axis.title = element_text(face = "bold"),
+                  panel.grid.minor = element_blank()))
+
+
+# ==============================================================================
+# 1. DISTRIBUCIÓN UNIFORME CONTINUA
+# ==============================================================================
+# Definición: X ~ U(a, b). Todos los intervalos de la misma longitud tienen igual probabilidad.
+# PDF: f(x) = 1 / (b - a)  para a <= x <= b
+# CDF: F(x) = (x - a) / (b - a)
+# Parámetros estadísticos: E[X] = (a + b) / 2 | Var(X) = (b - a)^2 / 12
+# Funciones en R: dunif(x, min, max), punif(q, min, max), qunif(p, min, max), runif(n, min, max)
+
+x_unif <- seq(0, 10, length.out = 500)
+df_unif <- data.frame(x = x_unif, PDF = dunif(x_unif, 2, 8), CDF = punif(x_unif, 2, 8))
+
+p1_pdf <- ggplot(df_unif, aes(x = x, y = PDF)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  labs(title = "PDF - Uniforme U(2, 8)", x = "x", y = "f(x)")
+
+p1_cdf <- ggplot(df_unif, aes(x = x, y = CDF)) +
+  geom_line(color = "darkblue", size = 1.2) +
+  labs(title = "CDF - Uniforme U(2, 8)", x = "x", y = "F(x)")
+
+grid.arrange(p1_pdf, p1_cdf, ncol = 2)
+
+# --- Ejercicio 1.1: Control de Procesos (Tiempo de secado en minutos) ---
+# Tiempo de secado uniformemente distribuido entre 15 y 25 min. ¿P(X < 18 min)?
+a11 <- 15; b11 <- 25
+p_teo_11 <- punif(18, min = a11, max = b11)
+sim_11 <- runif(10000, min = a11, max = b11)
+p_sim_11 <- mean(sim_11 < 18)
+cat("Ex 1.1 - P(X < 18): Teórico =", p_teo_11, "| Muestral =", p_sim_11, "\n")
+
+# --- Ejercicio 1.2: Logística (Tiempo de espera de camión en horas) ---
+# Espera distribuida en U(1, 5). ¿P(2.5 < X < 4)?
+a12 <- 1; b12 <- 5
+p_teo_12 <- punif(4, a12, b12) - punif(2.5, a12, b12)
+sim_12 <- runif(10000, a12, b12)
+p_sim_12 <- mean(sim_12 > 2.5 & sim_12 < 4)
+cat("Ex 1.2 - P(2.5 < X < 4): Teórico =", p_teo_12, "| Muestral =", p_sim_12, "\n")
+
+# --- Ejercicio 1.3: Manufactura (Diámetro de corte de pieza en mm) ---
+# Tolerancia en U(49.8, 50.2). ¿Percentil 90 del diámetro?
+a13 <- 49.8; b13 <- 50.2
+q_teo_13 <- qunif(0.90, min = a13, max = b13)
+sim_13 <- runif(10000, min = a13, max = b13)
+q_sim_13 <- quantile(sim_13, 0.90)
+cat("Ex 1.3 - Percentil 90: Teórico =", q_teo_13, "| Muestral =", q_sim_13, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 1.2
+df_graph_1 <- data.frame(x = seq(1, 5, length.out = 300)) %>%
+  mutate(y = dunif(x, 1, 5))
+ggplot(df_graph_1, aes(x = x, y = y)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_ribbon(data = filter(df_graph_1, x >= 2.5 & x <= 4), aes(ymax = y, ymin = 0), fill = "steelblue", alpha = 0.5) +
+  labs(title = "Ex 1.2: Área P(2.5 < X < 4) en U(1, 5)", x = "Horas", y = "f(x)")
+
+
+# ==============================================================================
+# 2. DISTRIBUCIÓN EXPONENCIAL
+# ==============================================================================
+# Definición: X ~ Exp(lambda). Modela el tiempo entre eventos Poisson independientes.
+# PDF: f(x) = lambda * exp(-lambda * x)  para x >= 0
+# CDF: F(x) = 1 - exp(-lambda * x)
+# Parámetros estadísticos: E[X] = 1 / lambda | Var(X) = 1 / lambda^2
+# Funciones en R: dexp(x, rate), pexp(q, rate), qexp(p, rate), rexp(n, rate)
+
+x_exp <- seq(0, 5, length.out = 500)
+df_exp <- data.frame(x = x_exp, PDF = dexp(x_exp, rate = 1.5), CDF = pexp(x_exp, rate = 1.5))
+
+p2_pdf <- ggplot(df_exp, aes(x = x, y = PDF)) +
+  geom_line(color = "forestgreen", size = 1.2) +
+  labs(title = "PDF - Exponencial Exp(rate = 1.5)", x = "x", y = "f(x)")
+
+p2_cdf <- ggplot(df_exp, aes(x = x, y = CDF)) +
+  geom_line(color = "darkgreen", size = 1.2) +
+  labs(title = "CDF - Exponencial Exp(rate = 1.5)", x = "x", y = "F(x)")
+
+grid.arrange(p2_pdf, p2_cdf, ncol = 2)
+
+# --- Ejercicio 2.1: Mantenimiento (Tiempo hasta falla de componente) ---
+# Tasa de falla lambda = 0.05 fallas/hora (media = 20 horas). ¿P(X > 30 horas)?
+rate21 <- 0.05
+p_teo_21 <- 1 - pexp(30, rate = rate21)
+sim_21 <- rexp(10000, rate = rate21)
+p_sim_21 <- mean(sim_21 > 30)
+cat("Ex 2.1 - P(X > 30): Teórico =", p_teo_21, "| Muestral =", p_sim_21, "\n")
+
+# --- Ejercicio 2.2: Redes (Tiempo de atención en cajero en minutos) ---
+# Tasa lambda = 0.2 atendidos/min (media = 5 min). ¿P(X <= 3 min)?
+rate22 <- 0.2
+p_teo_22 <- pexp(3, rate = rate22)
+sim_22 <- rexp(10000, rate = rate22)
+p_sim_22 <- mean(sim_22 <= 3)
+cat("Ex 2.2 - P(X <= 3): Teórico =", p_teo_22, "| Muestral =", p_sim_22, "\n")
+
+# --- Ejercicio 2.3: Telecomunicaciones (Duración de llamadas en min) ---
+# Tasa lambda = 0.333 (media = 3 min). ¿Tiempo máximo del 95% de las llamadas?
+rate23 <- 1/3
+q_teo_23 <- qexp(0.95, rate = rate23)
+sim_23 <- rexp(10000, rate = rate23)
+q_sim_23 <- quantile(sim_23, 0.95)
+cat("Ex 2.3 - Percentil 95: Teórico =", q_teo_23, "| Muestral =", q_sim_23, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 2.1
+df_graph_2 <- data.frame(x = seq(0, 100, length.out = 400)) %>%
+  mutate(y = dexp(x, rate = rate21))
+ggplot(df_graph_2, aes(x = x, y = y)) +
+  geom_line(color = "forestgreen", size = 1) +
+  geom_ribbon(data = filter(df_graph_2, x >= 30), aes(ymax = y, ymin = 0), fill = "forestgreen", alpha = 0.5) +
+  labs(title = "Ex 2.1: Área P(X > 30) en Exp(lambda = 0.05)", x = "Horas", y = "f(x)")
+
+
+# ==============================================================================
+# 3. DISTRIBUCIÓN GAMMA
+# ==============================================================================
+# Definición: X ~ Gamma(alpha, beta). Modela el tiempo hasta que ocurren alpha eventos Poisson.
+# Parámetros: alpha = forma (shape), beta = tasa (rate) = 1/escala (scale).
+# Parámetros estadísticos: E[X] = alpha / rate | Var(X) = alpha / rate^2
+# Funciones en R: dgamma(x, shape, rate), pgamma(q, shape, rate), qgamma(), rgamma()
+
+x_gamma <- seq(0, 20, length.out = 500)
+df_gamma <- data.frame(x = x_gamma, PDF = dgamma(x_gamma, shape = 3, rate = 0.5), CDF = pgamma(x_gamma, shape = 3, rate = 0.5))
+
+p3_pdf <- ggplot(df_gamma, aes(x = x, y = PDF)) +
+  geom_line(color = "purple", size = 1.2) +
+  labs(title = "PDF - Gamma(shape = 3, rate = 0.5)", x = "x", y = "f(x)")
+
+p3_cdf <- ggplot(df_gamma, aes(x = x, y = CDF)) +
+  geom_line(color = "darkpurple", size = 1.2) +
+  labs(title = "CDF - Gamma(shape = 3, rate = 0.5)", x = "x", y = "F(x)")
+
+grid.arrange(p3_pdf, p3_cdf, ncol = 2)
+
+# --- Ejercicio 3.1: Ingenieria de Sofware (Tiempo para corregir 4 errores) ---
+# Errores ocurren a tasa = 0.5 por hora. shape = 4, rate = 0.5. ¿P(Tiempo > 10 horas)?
+s31 <- 4; r31 <- 0.5
+p_teo_31 <- 1 - pgamma(10, shape = s31, rate = r31)
+sim_31 <- rgamma(10000, shape = s31, rate = r31)
+p_sim_31 <- mean(sim_31 > 10)
+cat("Ex 3.1 - P(X > 10): Teórico =", p_teo_31, "| Muestral =", p_sim_31, "\n")
+
+# --- Ejercicio 3.2: Hidrología (Precipitación acumulada mensual en mm) ---
+# Modelada con shape = 2, scale = 15 (rate = 1/15). ¿P(Precipitación entre 10 y 40 mm)?
+s32 <- 2; r32 <- 1/15
+p_teo_32 <- pgamma(40, shape = s32, rate = r32) - pgamma(10, shape = s32, rate = r32)
+sim_32 <- rgamma(10000, shape = s32, rate = r32)
+p_sim_32 <- mean(sim_32 > 10 & sim_32 < 40)
+cat("Ex 3.2 - P(10 < X < 40): Teórico =", p_teo_32, "| Muestral =", p_sim_32, "\n")
+
+# --- Ejercicio 3.3: Finanzas (Tiempo acumulado para 3 reclamaciones) ---
+# shape = 3, rate = 0.2. ¿Mediana del tiempo de espera?
+s33 <- 3; r33 <- 0.2
+q_teo_33 <- qgamma(0.50, shape = s33, rate = r33)
+sim_33 <- rgamma(10000, shape = s33, rate = r33)
+q_sim_33 <- median(sim_33)
+cat("Ex 3.3 - Mediana: Teórica =", q_teo_33, "| Muestral =", q_sim_33, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 3.1
+df_graph_3 <- data.frame(x = seq(0, 25, length.out = 400)) %>%
+  mutate(y = dgamma(x, shape = s31, rate = r31))
+ggplot(df_graph_3, aes(x = x, y = y)) +
+  geom_line(color = "purple", size = 1) +
+  geom_ribbon(data = filter(df_graph_3, x >= 10), aes(ymax = y, ymin = 0), fill = "purple", alpha = 0.5) +
+  labs(title = "Ex 3.1: Área P(X > 10) en Gamma(shape = 4, rate = 0.5)", x = "Horas", y = "f(x)")
+
+
+# ==============================================================================
+# 4. DISTRIBUCIÓN BETA
+# ==============================================================================
+# Definición: X ~ Beta(alpha, beta) definida en el intervalo continuo [0, 1].
+# Utilizada para modelar proporciones, porcentajes y tasas de éxito.
+# Parámetros estadísticos: E[X] = a / (a + b) | Var(X) = (a * b) / ((a + b)^2 * (a + b + 1))
+# Funciones en R: dbeta(x, shape1, shape2), pbeta(), qbeta(), rbeta()
+
+x_beta <- seq(0, 1, length.out = 500)
+df_beta <- data.frame(x = x_beta, PDF = dbeta(x_beta, 2, 5), CDF = pbeta(x_beta, 2, 5))
+
+p4_pdf <- ggplot(df_beta, aes(x = x, y = PDF)) +
+  geom_line(color = "darkorange", size = 1.2) +
+  labs(title = "PDF - Beta(shape1 = 2, shape2 = 5)", x = "x", y = "f(x)")
+
+p4_cdf <- ggplot(df_beta, aes(x = x, y = CDF)) +
+  geom_line(color = "brown", size = 1.2) +
+  labs(title = "CDF - Beta(shape1 = 2, shape2 = 5)", x = "x", y = "F(x)")
+
+grid.arrange(p4_pdf, p4_cdf, ncol = 2)
+
+# --- Ejercicio 4.1: Control de Calidad (Proporción de impurezas en lote) ---
+# X ~ Beta(2, 8). ¿P(Proporción de impurezas supere el 30%)?
+a41 <- 2; b41 <- 8
+p_teo_41 <- 1 - pbeta(0.30, shape1 = a41, shape2 = b41)
+sim_41 <- rbeta(10000, shape1 = a41, shape2 = b41)
+p_sim_41 <- mean(sim_41 > 0.30)
+cat("Ex 4.1 - P(X > 0.30): Teórico =", p_teo_41, "| Muestral =", p_sim_41, "\n")
+
+# --- Ejercicio 4.2: Proyectos (Porcentaje de avance en obra) ---
+# Avance ~ Beta(5, 2). ¿P(Avance entre 60% y 90%)?
+a42 <- 5; b42 <- 2
+p_teo_42 <- pbeta(0.90, a42, b42) - pbeta(0.60, a42, b42)
+sim_42 <- rbeta(10000, a42, b42)
+p_sim_42 <- mean(sim_42 > 0.60 & sim_42 < 0.90)
+cat("Ex 4.2 - P(0.60 < X < 0.90): Teórico =", p_teo_42, "| Muestral =", p_sim_42, "\n")
+
+# --- Ejercicio 4.3: Mercadotecnia (Tasa de clics en anuncio web) ---
+# CTR ~ Beta(3, 40). ¿Percentil 90 de la tasa de clics?
+a43 <- 3; b43 <- 40
+q_teo_43 <- qbeta(0.90, a43, b43)
+sim_43 <- rbeta(10000, a43, b43)
+q_sim_43 <- quantile(sim_43, 0.90)
+cat("Ex 4.3 - Percentil 90 CTR: Teórico =", q_teo_43, "| Muestral =", q_sim_43, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 4.1
+df_graph_4 <- data.frame(x = seq(0, 1, length.out = 300)) %>%
+  mutate(y = dbeta(x, a41, b41))
+ggplot(df_graph_4, aes(x = x, y = y)) +
+  geom_line(color = "darkorange", size = 1) +
+  geom_ribbon(data = filter(df_graph_4, x >= 0.30), aes(ymax = y, ymin = 0), fill = "darkorange", alpha = 0.5) +
+  labs(title = "Ex 4.1: Área P(X > 0.30) en Beta(2, 8)", x = "Proporción", y = "f(x)")
+
+
+# ==============================================================================
+# 5. DISTRIBUCIÓN WEIBULL
+# ==============================================================================
+# Definición: X ~ Weibull(shape, scale). Utilizada en ingeniería de confiabilidad.
+# PDF: f(x) = (k/lambda) * (x/lambda)^(k-1) * exp(-(x/lambda)^k)
+# Modela tasas de falla crecientes (shape > 1), constantes (shape = 1) o decrecientes (shape < 1).
+# Funciones en R: dweibull(x, shape, scale), pweibull(), qweibull(), rweibull()
+
+x_weib <- seq(0, 5, length.out = 500)
+df_weib <- data.frame(x = x_weib, PDF = dweibull(x_weib, shape = 2, scale = 2), CDF = pweibull(x_weib, shape = 2, scale = 2))
+
+p5_pdf <- ggplot(df_weib, aes(x = x, y = PDF)) +
+  geom_line(color = "firebrick", size = 1.2) +
+  labs(title = "PDF - Weibull(shape = 2, scale = 2)", x = "x", y = "f(x)")
+
+p5_cdf <- ggplot(df_weib, aes(x = x, y = CDF)) +
+  geom_line(color = "darkred", size = 1.2) +
+  labs(title = "CDF - Weibull(shape = 2, scale = 2)", x = "x", y = "F(x)")
+
+grid.arrange(p5_pdf, p5_cdf, ncol = 2)
+
+# --- Ejercicio 5.1: Confiabilidad (Vida útil de turbinas de avión en miles de horas) ---
+# shape = 1.5, scale = 10. ¿P(Turbina dure más de 12 mil horas)?
+sh51 <- 1.5; sc51 <- 10
+p_teo_51 <- 1 - pweibull(12, shape = sh51, scale = sc51)
+sim_51 <- rweibull(10000, shape = sh51, scale = sc51)
+p_sim_51 <- mean(sim_51 > 12)
+cat("Ex 5.1 - P(X > 12): Teórico =", p_teo_51, "| Muestral =", p_sim_51, "\n")
+
+# --- Ejercicio 5.2: Energías Renovables (Velocidad del viento en m/s) ---
+# shape = 2.2, scale = 8. ¿P(Velocidad entre 5 y 10 m/s)?
+sh52 <- 2.2; sc52 <- 8
+p_teo_52 <- pweibull(10, sh52, sc52) - pweibull(5, sh52, sc52)
+sim_52 <- rweibull(10000, sh52, sc52)
+p_sim_52 <- mean(sim_52 > 5 & sim_52 < 10)
+cat("Ex 5.2 - P(5 < X < 10): Teórico =", p_teo_52, "| Muestral =", p_sim_52, "\n")
+
+# --- Ejercicio 5.3: Garantía (Tiempo de falla de baterías en meses) ---
+# shape = 3, scale = 36. ¿Tiempo de garantía para que solo falle el 5%?
+sh53 <- 3; sc53 <- 36
+q_teo_53 <- qweibull(0.05, shape = sh53, scale = sc53)
+sim_53 <- rweibull(10000, shape = sh53, scale = sc53)
+q_sim_53 <- quantile(sim_53, 0.05)
+cat("Ex 5.3 - Garantía (Percentil 5): Teórico =", q_teo_53, "| Muestral =", q_sim_53, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 5.1
+df_graph_5 <- data.frame(x = seq(0, 30, length.out = 400)) %>%
+  mutate(y = dweibull(x, sh51, sc51))
+ggplot(df_graph_5, aes(x = x, y = y)) +
+  geom_line(color = "firebrick", size = 1) +
+  geom_ribbon(data = filter(df_graph_5, x >= 12), aes(ymax = y, ymin = 0), fill = "firebrick", alpha = 0.5) +
+  labs(title = "Ex 5.1: Área P(X > 12) en Weibull(1.5, 10)", x = "Miles de horas", y = "f(x)")
+
+
+# ==============================================================================
+# 6. DISTRIBUCIÓN JI-CUADRADA (Chi-Square)
+# ==============================================================================
+# Definición: X ~ ChiSq(df). Suma de df variables normales estándar al cuadrado.
+# Parámetros: df = grados de libertad.
+# Parámetros estadísticos: E[X] = df | Var(X) = 2 * df
+# Funciones en R: dchisq(x, df), pchisq(q, df), qchisq(p, df), rchisq(n, df)
+
+x_chisq <- seq(0, 20, length.out = 500)
+df_chisq <- data.frame(x = x_chisq, PDF = dchisq(x_chisq, df = 5), CDF = pchisq(x_chisq, df = 5))
+
+p6_pdf <- ggplot(df_chisq, aes(x = x, y = PDF)) +
+  geom_line(color = "teal", size = 1.2) +
+  labs(title = "PDF - Ji-cuadrada (df = 5)", x = "x", y = "f(x)")
+
+p6_cdf <- ggplot(df_chisq, aes(x = x, y = CDF)) +
+  geom_line(color = "darkteal", size = 1.2) +
+  labs(title = "CDF - Ji-cuadrada (df = 5)", x = "x", y = "F(x)")
+
+grid.arrange(p6_pdf, p6_cdf, ncol = 2)
+
+# --- Ejercicio 6.1: Inferencia (Prueba de varianza muestral con n = 15) ---
+# Estadístico de prueba sigue ChiSq(df = 14). ¿Valor crítico superior para alpha = 0.05?
+df61 <- 14
+q_teo_61 <- qchisq(0.95, df = df61)
+sim_61 <- rchisq(10000, df = df61)
+q_sim_61 <- quantile(sim_61, 0.95)
+cat("Ex 6.1 - Valor crítico ChiSq (df=14, alpha=0.05): Teórico =", q_teo_61, "| Muestral =", q_sim_61, "\n")
+
+# --- Ejercicio 6.2: Pruebas de Bondad de Ajuste ---
+# Estadístico ChiSq en tabla de contingencia con df = 8. ¿P(ChiSq > 15.51)?
+df62 <- 8
+p_teo_62 <- 1 - pchisq(15.51, df = df62)
+sim_62 <- rchisq(10000, df = df62)
+p_sim_62 <- mean(sim_62 > 15.51)
+cat("Ex 6.2 - P(ChiSq > 15.51): Teórico =", p_teo_62, "| Muestral =", p_sim_62, "\n")
+
+# --- Ejercicio 6.3: Estimación de Intervalos de Confianza ---
+# df = 20. ¿P(ChiSq esté entre 9.59 y 34.17)?
+df63 <- 20
+p_teo_63 <- pchisq(34.17, df = df63) - pchisq(9.59, df = df63)
+sim_63 <- rchisq(10000, df = df63)
+p_sim_63 <- mean(sim_63 > 9.59 & sim_63 < 34.17)
+cat("Ex 6.3 - P(9.59 < ChiSq < 34.17): Teórico =", p_teo_63, "| Muestral =", p_sim_63, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 6.2
+df_graph_6 <- data.frame(x = seq(0, 25, length.out = 400)) %>%
+  mutate(y = dchisq(x, df = df62))
+ggplot(df_graph_6, aes(x = x, y = y)) +
+  geom_line(color = "teal", size = 1) +
+  geom_ribbon(data = filter(df_graph_6, x >= 15.51), aes(ymax = y, ymin = 0), fill = "teal", alpha = 0.5) +
+  labs(title = "Ex 6.2: Área P(ChiSq > 15.51) con df = 8", x = "ChiSq", y = "f(x)")
+
+
+# ==============================================================================
+# 7. DISTRIBUCIÓN t DE STUDENT
+# ==============================================================================
+# Definición: X ~ t(df). Modela el cociente Z / sqrt(V / df) donde Z~N(0,1) y V~ChiSq(df).
+# Simétrica, con colas más pesadas que la Normal Estándar.
+# Parámetros estadísticos: E[X] = 0 (para df > 1) | Var(X) = df / (df - 2) (para df > 2)
+# Funciones en R: dt(x, df), pt(q, df), qt(p, df), rt(n, df)
+
+x_t <- seq(-4, 4, length.out = 500)
+df_t_dist <- data.frame(x = x_t, PDF = dt(x_t, df = 4), CDF = pt(x_t, df = 4))
+
+p7_pdf <- ggplot(df_t_dist, aes(x = x, y = PDF)) +
+  geom_line(color = "violet", size = 1.2) +
+  labs(title = "PDF - t de Student (df = 4)", x = "t", y = "f(t)")
+
+p7_cdf <- ggplot(df_t_dist, aes(x = x, y = CDF)) +
+  geom_line(color = "darkblue", size = 1.2) +
+  labs(title = "CDF - t de Student (df = 4)", x = "t", y = "F(t)")
+
+grid.arrange(p7_pdf, p7_cdf, ncol = 2)
+
+# --- Ejercicio 7.1: Prueba t para una Muestra (n = 25 -> df = 24) ---
+# Prueba de hipótesis bilateral con alpha = 0.05. ¿Valor crítico t_alpha/2?
+df71 <- 24
+q_teo_71 <- qt(0.975, df = df71)
+sim_71 <- rt(10000, df = df71)
+q_sim_71 <- quantile(sim_71, 0.975)
+cat("Ex 7.1 - Valor crítico t (df=24, 97.5%): Teórico =", q_teo_71, "| Muestral =", q_sim_71, "\n")
+
+# --- Ejercicio 7.2: Econometría (Prueba de significancia de coeficientes) ---
+# Estadístico t calculado t = 2.15 con df = 18. ¿P-valor unilateral P(t > 2.15)?
+df72 <- 18
+p_teo_72 <- 1 - pt(2.15, df = df72)
+sim_72 <- rt(10000, df = df72)
+p_sim_72 <- mean(sim_72 > 2.15)
+cat("Ex 7.2 - P(t > 2.15): Teórico =", p_teo_72, "| Muestral =", p_sim_72, "\n")
+
+# --- Ejercicio 7.3: Inferencia (Intervalo de Confianza del 99% con df = 10) ---
+# ¿Valor crítico t para 99.5% acumulado?
+df73 <- 10
+q_teo_73 <- qt(0.995, df = df73)
+sim_73 <- rt(10000, df = df73)
+q_sim_73 <- quantile(sim_73, 0.995)
+cat("Ex 7.3 - Valor crítico t (df=10, 99.5%): Teórico =", q_teo_73, "| Muestral =", q_sim_73, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 7.2
+df_graph_7 <- data.frame(x = seq(-4, 4, length.out = 400)) %>%
+  mutate(y = dt(x, df = df72))
+ggplot(df_graph_7, aes(x = x, y = y)) +
+  geom_line(color = "violet", size = 1) +
+  geom_ribbon(data = filter(df_graph_7, x >= 2.15), aes(ymax = y, ymin = 0), fill = "violet", alpha = 0.5) +
+  labs(title = "Ex 7.2: Área P(t > 2.15) con df = 18", x = "t", y = "f(t)")
+
+
+# ==============================================================================
+# 8. DISTRIBUCIÓN F DE SNEDECOR
+# ==============================================================================
+# Definición: X ~ F(df1, df2). Cociente de dos varianzas independientes ChiSq ajustadas por sus df.
+# Utilizada en ANOVA y en pruebas de igualdad de varianzas.
+# Parámetros: df1 (grados de libertad del numerador), df2 (grados de libertad del denominador).
+# Funciones en R: df(x, df1, df2), pf(q, df1, df2), qf(p, df1, df2), rf(n, df1, df2)
+
+x_f <- seq(0, 5, length.out = 500)
+df_f_dist <- data.frame(x = x_f, PDF = df(x_f, df1 = 5, df2 = 20), CDF = pf(x_f, df1 = 5, df2 = 20))
+
+p8_pdf <- ggplot(df_f_dist, aes(x = x, y = PDF)) +
+  geom_line(color = "coral", size = 1.2) +
+  labs(title = "PDF - F de Snedecor F(5, 20)", x = "F", y = "f(F)")
+
+p8_cdf <- ggplot(df_f_dist, aes(x = x, y = CDF)) +
+  geom_line(color = "red", size = 1.2) +
+  labs(title = "CDF - F de Snedecor F(5, 20)", x = "F", y = "F(F)")
+
+grid.arrange(p8_pdf, p8_cdf, ncol = 2)
+
+# --- Ejercicio 8.1: ANOVA (Comparación de 4 tratamientos con n = 6 por grupo) ---
+# df1 = 3 (tratamientos), df2 = 20 (error). ¿Valor crítico F para alpha = 0.05?
+df1_81 <- 3; df2_81 <- 20
+q_teo_81 <- qf(0.95, df1 = df1_81, df2 = df2_81)
+sim_81 <- rf(10000, df1 = df1_81, df2 = df2_81)
+q_sim_81 <- quantile(sim_81, 0.95)
+cat("Ex 8.1 - Valor crítico F (3, 20, alpha=0.05): Teórico =", q_teo_81, "| Muestral =", q_sim_81, "\n")
+
+# --- Ejercicio 8.2: Prueba F de Varianzas de dos Poblaciones ---
+# Estadístico F observado F = 2.85 con df1 = 9 y df2 = 12. ¿P-valor P(F > 2.85)?
+df1_82 <- 9; df2_82 <- 12
+p_teo_82 <- 1 - pf(2.85, df1 = df1_82, df2 = df2_82)
+sim_82 <- rf(10000, df1 = df1_82, df2 = df2_82)
+p_sim_82 <- mean(sim_82 > 2.85)
+cat("Ex 8.2 - P(F > 2.85): Teórico =", p_teo_82, "| Muestral =", p_sim_82, "\n")
+
+# --- Ejercicio 8.3: Econometría (Prueba de regresión global) ---
+# df1 = 5, df2 = 40. ¿Probabilidad de obtener un F menor a 1.5?
+df1_83 <- 5; df2_83 <- 40
+p_teo_83 <- pf(1.5, df1 = df1_83, df2 = df2_83)
+sim_83 <- rf(10000, df1 = df1_83, df2 = df2_83)
+p_sim_83 <- mean(sim_83 < 1.5)
+cat("Ex 8.3 - P(F < 1.5): Teórico =", p_teo_83, "| Muestral =", p_sim_83, "\n")
+
+# Gráfica con área sombreada para el Ejercicio 8.1
+df_graph_8 <- data.frame(x = seq(0, 6, length.out = 400)) %>%
+  mutate(y = df(x, df1 = df1_81, df2 = df2_81))
+ggplot(df_graph_8, aes(x = x, y = y)) +
+  geom_line(color = "coral", size = 1) +
+  geom_ribbon(data = filter(df_graph_8, x >= q_teo_81), aes(ymax = y, ymin = 0), fill = "coral", alpha = 0.5) +
+  labs(title = "Ex 8.1: Región de rechazo (F > 3.098) en F(3, 20)", x = "F", y = "f(F)")
+```
